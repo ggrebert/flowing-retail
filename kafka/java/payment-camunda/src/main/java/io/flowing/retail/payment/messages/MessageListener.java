@@ -15,8 +15,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.flowing.retail.payment.flow.PaymentReceivedEventPayload;
-
 @Component
 @EnableBinding(Sink.class)
 public class MessageListener {  
@@ -43,6 +41,22 @@ public class MessageListener {
       .setVariable("refId", retrievePaymentCommand.getRefId()) //
       .setVariable("correlationId", message.getCorrelationid()) //
       .correlateWithResult();    
+  }
+
+  @StreamListener(target = Sink.INPUT,
+          condition="(headers['type']?:'')=='SayHelloCommand'")
+  @Transactional
+  public void retrieveSayHelloCommandReceived(String messageJson) throws JsonParseException, JsonMappingException, IOException {
+    Message<RetrieveSayHelloCommandPayload> message = objectMapper.readValue(messageJson, new TypeReference<Message<RetrieveSayHelloCommandPayload>>(){});
+    RetrieveSayHelloCommandPayload retrieveSayHelloCommand = message.getData();
+
+    System.out.println("Say hello, number of commands :" + retrieveSayHelloCommand.getNumberOfCommands());
+
+    camunda.getRuntimeService().createMessageCorrelation(message.getType()) //
+            .processInstanceBusinessKey(message.getTraceid())
+            .setVariable("numberOfCommands", retrieveSayHelloCommand.getNumberOfCommands()) //
+            .setVariable("correlationId", message.getCorrelationid()) //
+            .correlateWithResult();
   }
     
     
